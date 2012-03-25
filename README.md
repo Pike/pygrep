@@ -45,4 +45,4 @@ all the following commands
 
 will return
 
-    foo.py(A.m):2 mymod.bar.mod.method
+    foo.py(A.m):4 mymod.bar.mod.method
