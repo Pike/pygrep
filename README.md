@@ -25,3 +25,24 @@ At this point, pygrep resolves
 and
 
     from foo import bar as baz
+
+Example
+-------
+
+Given this python file `foo.py`
+
+    from mymod.bar import stuff as a
+    class A:
+        def m(self):
+            b = a.mod.method()
+
+all the following commands
+
+    pygrep mymod foo.py
+    pygrep mymod.bar foo.py
+    pygrep mymod.bar.mod foo.py
+    pygrep mymod.bar.mod.method foo.py
+
+will return
+
+    foo.py(A.m):2 mymod.bar.mod.method
