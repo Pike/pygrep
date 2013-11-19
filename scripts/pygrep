@@ -8,7 +8,22 @@ from optparse import OptionParser
 
 
 parser = OptionParser()
+parser.add_option('-l', '--list', action='store_true',
+                  help='only gather the list of entrypoints')
 (options, args) = parser.parse_args()
 ident = args[0]
 files_or_dirs = args[1:]
-pygrep.handleIdent(ident, files_or_dirs)
+if options.list:
+    entrypoints = set()
+    def handler(path, context, node, ident):
+        entrypoints.add('.'.join(ident))
+else:
+    def handler(path, context, node, ident):
+        fd = ''
+        if context:
+            fd = '(%s)' % '.'.join(map(lambda t: t[0], context))
+        print '%s%s:%s\t%s' % (path, fd, node.lineno, '.'.join(ident))
+
+pygrep.handleIdent(ident, files_or_dirs, handler)
+if options.list:
+    print '\n'.join(sorted(entrypoints))

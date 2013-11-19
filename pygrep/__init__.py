@@ -10,10 +10,11 @@ import os.path
 
 
 class IdentVisitor(ast.NodeVisitor):
-    def __init__(self, path, ident):
+    def __init__(self, path, ident, callback):
         super(IdentVisitor, self).__init__()
         self.path = path
         self.ident = ident.split('.')
+        self.callback = callback
         self.attrs = deque()
         self.context = deque()
         self.importMap = {}
@@ -50,18 +51,17 @@ class IdentVisitor(ast.NodeVisitor):
         for l, r in zip(ident, self.ident):
             if l != r:
                 return
-        fd = ''
-        if self.context:
-            fd = '(%s)' % '.'.join(map(lambda t: t[0], self.context))
-        print '%s%s:%s\t%s' % (self.path, fd, node.lineno, '.'.join(ident))
+        self.callback(self.path, self.context, node, ident)
+
     def visit_Attribute(self, node):
         self.attrs.appendleft(node.attr)
         self.generic_visit(node)
 
 
 class handleIdent:
-    def __init__(self, ident, files_or_dirs):
+    def __init__(self, ident, files_or_dirs, callback):
         self.ident = ident
+        self.callback = callback
         for fd in files_or_dirs:
             if os.path.isdir(fd):
                 for dirpath, dirnames, filenames in walk(fd):
@@ -72,7 +72,7 @@ class handleIdent:
                 self.handleFile(fd)
     def handleFile(self, path):
         m = ast.parse(open(path).read(), path)
-        iv = IdentVisitor(path, self.ident)
+        iv = IdentVisitor(path, self.ident, self.callback)
         iv.visit(m)
 
         
