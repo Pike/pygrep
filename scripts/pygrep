@@ -7,16 +7,17 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import pygrep
-from optparse import OptionParser
+import argparse
 
 
-parser = OptionParser()
-parser.add_option('-l', '--list', action='store_true',
-                  help='only gather the list of entrypoints')
-(options, args) = parser.parse_args()
-ident = args[0]
-files_or_dirs = args[1:]
-if options.list:
+parser = argparse.ArgumentParser()
+parser.add_argument('-l', '--list', action='store_true',
+                    help='only gather the list of entrypoints')
+parser.add_argument('ident')
+parser.add_argument('path', nargs='+')
+
+args = parser.parse_args()
+if args.list:
     entrypoints = set()
     def handler(path, context, node, ident):
         entrypoints.add('.'.join(ident))
@@ -27,6 +28,6 @@ else:
             fd = '(%s)' % '.'.join([t[0] for t in context])
         print('%s%s:%s\t%s' % (path, fd, node.lineno, '.'.join(ident)))
 
-pygrep.handleIdent(ident, files_or_dirs, handler)
-if options.list:
+pygrep.handleIdent(args.ident, args.path, handler)
+if args.list:
     print('\n'.join(sorted(entrypoints)))
