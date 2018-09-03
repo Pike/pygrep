@@ -26,13 +26,13 @@ class IdentVisitor(ast.NodeVisitor):
             # relative imports not supported
             return
         mods = tuple(node.module.split('.'))
-        for l, r in zip(mods, self.ident):
-            if l != r:
+        for left, right in zip(mods, self.ident):
+            if left != right:
                 return
         subident = self.ident[len(mods):]
         for alias in node.names:
-            for l, r in zip(alias.name.split('.'), subident):
-                if l != r:
+            for left, right in zip(alias.name.split('.'), subident):
+                if left != right:
                     continue
             lname = alias.asname is not None and alias.asname or alias.name
             self.importMap[lname] = mods + (alias.name, )
@@ -50,8 +50,8 @@ class IdentVisitor(ast.NodeVisitor):
             ident = self.importMap[ident[0]] + ident[1:]
         if len(ident) < len(self.ident):
             return
-        for l, r in zip(ident, self.ident):
-            if l != r:
+        for left, right in zip(ident, self.ident):
+            if left != right:
                 return
         self.callback(self.path, self.context, node, ident)
 
