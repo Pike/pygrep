@@ -2,11 +2,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
+from __future__ import absolute_import
 
 import ast
 from collections import deque
 from os import walk
 import os.path
+from six.moves import zip
 
 
 class IdentVisitor(ast.NodeVisitor):
@@ -70,9 +72,8 @@ class handleIdent:
                             self.handleFile(os.path.join(dirpath, fn))
             else:
                 self.handleFile(fd)
+
     def handleFile(self, path):
         m = ast.parse(open(path).read(), path)
         iv = IdentVisitor(path, self.ident, self.callback)
         iv.visit(m)
-
-        
