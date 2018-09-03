@@ -23,7 +23,7 @@ setup(name='pygrep',
       packages=['pygrep'],
       scripts=['scripts/pygrep'],
       license="MPL 2.0",
-      classifiers=CLASSIFIERS.split("\n"),
+      classifiers=CLASSIFIERS.splitlines(),
       platforms=["any"],
       python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4',
       install_requires=[
