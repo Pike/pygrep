@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pygrep"
+version = "0.2"
+description = "Find python identifiers"
+authors = [{ name = "Axel Hecht", email = "axel@pike.org" }]
+
+readme = "README.md"
+
+license = { text = "MPL-2.0" }
+
+classifiers = [
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+]
+
+[project.scripts]
+pygrep = "pygrep:main"
