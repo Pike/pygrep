@@ -7,21 +7,39 @@ import ast
 from collections import deque
 from os import walk
 import os.path
+from collections.abc import Generator
 
 
-class IdentVisitor(ast.NodeVisitor):
-    def __init__(self, path, ident, callback):
+class IdentVisitor:
+    def __init__(self, path: str, ident: str):
         super(IdentVisitor, self).__init__()
         self.path = path
         self.ident = ident.split(".")
-        self.callback = callback
         self.attrs = deque()
         self.context = deque()
         self.importMap = {}
 
+    def visit(self, node: ast.AST) -> Generator[tuple, None, None]:
+        """Visit a node."""
+        method = "visit_" + node.__class__.__name__
+        visitor = getattr(self, method, self.generic_visit)
+        yield from visitor(node)
+
+    def generic_visit(self, node) -> Generator[tuple, None, None]:
+        """Called if no explicit visitor function exists for a node."""
+        for field, value in ast.iter_fields(node):
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, ast.AST):
+                        yield from self.visit(item)
+            elif isinstance(value, ast.AST):
+                yield from self.visit(value)
+
     def visit_ImportFrom(self, node):
         if node.level != 0:
             # relative imports not supported
+            # also, ensure we're a generator
+            yield from []
             return
         mods = tuple(node.module.split("."))
         for left, right in zip(mods, self.ident):
@@ -37,7 +55,7 @@ class IdentVisitor(ast.NodeVisitor):
 
     def context_visit(self, node):
         self.context.append((node.name, node.lineno))
-        self.generic_visit(node)
+        yield from self.generic_visit(node)
         self.context.pop()
 
     visit_FunctionDef = visit_ClassDef = context_visit
@@ -52,30 +70,32 @@ class IdentVisitor(ast.NodeVisitor):
         for left, right in zip(ident, self.ident):
             if left != right:
                 return
-        self.callback(self.path, self.context, node, ident)
+        yield (self.path, self.context, node, ident)
 
     def visit_Attribute(self, node):
         self.attrs.appendleft(node.attr)
-        self.generic_visit(node)
+        yield from self.generic_visit(node)
 
 
-class handleIdent:
-    def __init__(self, ident, files_or_dirs, callback):
+class FindIdentifier:
+    def __init__(self, ident, files_or_dirs):
         self.ident = ident
-        self.callback = callback
-        for fd in files_or_dirs:
+        self.files_or_dirs = files_or_dirs
+
+    def __call__(self) -> Generator[tuple, None]:
+        for fd in self.files_or_dirs:
             if os.path.isdir(fd):
                 for dirpath, dirnames, filenames in walk(fd):
                     for fn in filenames:
                         if fn.endswith(".py"):
-                            self.handleFile(os.path.join(dirpath, fn))
+                            yield from self.handleFile(os.path.join(dirpath, fn))
             else:
-                self.handleFile(fd)
+                yield from self.handleFile(fd)
 
     def handleFile(self, path):
         m = ast.parse(open(path).read(), path)
-        iv = IdentVisitor(path, self.ident, self.callback)
-        iv.visit(m)
+        iv = IdentVisitor(path, self.ident)
+        yield from iv.visit(m)
 
 
 def main():
@@ -87,20 +107,17 @@ def main():
     parser.add_argument("path", nargs="+")
 
     args = parser.parse_args()
+    finder = FindIdentifier(args.ident, args.path)
+
     if args.list:
         entrypoints = set()
-
-        def handler(path, context, node, ident):
+        for _, _, _, ident in finder():
             entrypoints.add(".".join(ident))
-
-    else:
-
-        def handler(path, context, node, ident):
-            fd = ""
-            if context:
-                fd = "(%s)" % ".".join([t[0] for t in context])
-            print("%s%s:%s\t%s" % (path, fd, node.lineno, ".".join(ident)))
-
-    handleIdent(args.ident, args.path, handler)
-    if args.list:
         print("\n".join(sorted(entrypoints)))
+        return
+
+    for path, context, node, ident in finder():
+        fd = ""
+        if context:
+            fd = "(%s)" % ".".join([t[0] for t in context])
+        print("%s%s:%s\t%s" % (path, fd, node.lineno, ".".join(ident)))
