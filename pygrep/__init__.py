@@ -4,17 +4,16 @@
 
 import argparse
 import ast
-from collections import deque
-from os import walk
 import os.path
+from collections import deque
 from collections.abc import Generator
+from os import walk
 
 
 class IdentVisitor:
-    def __init__(self, path: str, ident: str):
+    def __init__(self, ident: str):
         super(IdentVisitor, self).__init__()
-        self.path = path
-        self.ident = ident.split(".")
+        self.ident = tuple(ident.split("."))
         self.attrs = deque()
         self.context = deque()
         self.importMap = {}
@@ -35,6 +34,17 @@ class IdentVisitor:
             elif isinstance(value, ast.AST):
                 yield from self.visit(value)
 
+    def visit_Import(self, node):
+        for alias in node.names:
+            parts = tuple(alias.name.split("."))
+            if parts[: len(self.ident)] != self.ident:
+                continue
+            if alias.asname:
+                self.importMap[alias.asname] = parts
+            else:
+                self.importMap[parts[0]] = parts[:1]
+        yield from []  # hack to be an empty generator
+
     def visit_ImportFrom(self, node):
         if node.level != 0:
             # relative imports not supported
@@ -42,14 +52,13 @@ class IdentVisitor:
             yield from []
             return
         mods = tuple(node.module.split("."))
-        for left, right in zip(mods, self.ident):
-            if left != right:
-                return
+        if mods[: len(self.ident)] != self.ident:
+            return
         subident = self.ident[len(mods) :]
         for alias in node.names:
-            for left, right in zip(alias.name.split("."), subident):
-                if left != right:
-                    continue
+            parts = tuple(alias.name.split("."))
+            if parts[: len(subident)] != subident:
+                continue
             lname = alias.asname is not None and alias.asname or alias.name
             self.importMap[lname] = mods + (alias.name,)
 
@@ -61,20 +70,17 @@ class IdentVisitor:
     visit_FunctionDef = visit_ClassDef = context_visit
 
     def visit_Name(self, node):
-        ident = tuple(self.attrs) + (node.id,)
-        self.attrs.clear()
-        if ident[0] in self.importMap:
-            ident = self.importMap[ident[0]] + ident[1:]
-        if len(ident) < len(self.ident):
+        if node.id not in self.importMap:
             return
-        for left, right in zip(ident, self.ident):
-            if left != right:
-                return
-        yield (self.path, self.context, node, ident)
+        ident = (*self.importMap[node.id], *self.attrs)
+        if ident[: len(self.ident)] != self.ident:
+            return
+        yield (self.context, node, ident)
 
     def visit_Attribute(self, node):
         self.attrs.appendleft(node.attr)
         yield from self.generic_visit(node)
+        self.attrs.popleft()
 
 
 class FindIdentifier:
@@ -94,8 +100,9 @@ class FindIdentifier:
 
     def handleFile(self, path):
         m = ast.parse(open(path).read(), path)
-        iv = IdentVisitor(path, self.ident)
-        yield from iv.visit(m)
+        iv = IdentVisitor(self.ident)
+        for t in iv.visit(m):
+            yield (path, *t)
 
 
 def main():
