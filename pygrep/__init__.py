@@ -12,7 +12,7 @@ from os import walk
 
 class IdentVisitor:
     def __init__(self, ident: str):
-        super(IdentVisitor, self).__init__()
+        super().__init__()
         self.ident = tuple(ident.split("."))
         self.attrs = deque()
         self.context = deque()
@@ -106,7 +106,7 @@ class FindIdentifier:
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="pygrep")
     parser.add_argument(
         "-l", "--list", action="store_true", help="only gather the list of entrypoints"
     )
