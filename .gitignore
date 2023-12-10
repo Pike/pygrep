@@ -2,3 +2,9 @@
 MANIFEST
 build
 dist
+pygrep.egg-info
+pygrep-*.whl
+.pytest_cache
+.ruff_cache
+__pycache__
+.venv
