@@ -4,14 +4,18 @@ on:
   release:
     types: [published]
 
-permissions:
-  contents: read
-
 jobs:
   deploy:
 
+    name: Upload release to PyPI
     runs-on: ubuntu-latest
-
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pygrep
+    permissions:
+      contents: read
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+  
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -26,6 +30,3 @@ jobs:
       run: python -m build
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@2f6f737ca5f74c637829c0f5c3acd0e29ea5e8bf
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
