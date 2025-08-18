@@ -19,6 +19,9 @@ classifiers = [
   "Programming Language :: Python :: 3",
 ]
 
+[project.urls]
+source = "https://github.com/Pike/pygrep"
+
 [project.optional-dependencies]
 dev = ["pytest"]
 
